@@ -53,9 +53,9 @@ class ProjectTeam
 
   def add_users_ids(user_ids, access)
     UsersProject.add_users_into_projects(
-      [project.id],
-      user_ids,
-      access
+        [project.id],
+        user_ids,
+        access
     )
   end
 
@@ -70,6 +70,10 @@ class ProjectTeam
 
   def guests
     @guests ||= fetch_members(:guests)
+  end
+
+  def collectors
+    @collectors ||= fetch_members(:collectors)
   end
 
   def reporters

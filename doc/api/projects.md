@@ -200,6 +200,7 @@ The project access levels are defined in the `user_project.rb` class. Currently,
   REPORTER  = 20
   DEVELOPER = 30
   MASTER    = 40
+  COLLECTOR = 50
 ```
 
 

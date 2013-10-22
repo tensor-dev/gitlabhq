@@ -28,6 +28,7 @@ class UsersGroup < ActiveRecord::Base
   scope :reporters, -> { where(group_access: REPORTER) }
   scope :developers, -> { where(group_access: DEVELOPER) }
   scope :masters,  -> { where(group_access: MASTER) }
+  scope :collectors, -> { where(group_access: COLLECTOR) }
   scope :owners,  -> { where(group_access: OWNER) }
 
   scope :with_group, ->(group) { where(group_id: group.id) }

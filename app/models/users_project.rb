@@ -29,6 +29,7 @@ class UsersProject < ActiveRecord::Base
   delegate :name, :username, :email, to: :user, prefix: true
 
   scope :guests, -> { where(project_access: GUEST) }
+  scope :collectors, -> { where(project_access: COLLECTOR) }
   scope :reporters, -> { where(project_access: REPORTER) }
   scope :developers, -> { where(project_access: DEVELOPER) }
   scope :masters,  -> { where(project_access: MASTER) }

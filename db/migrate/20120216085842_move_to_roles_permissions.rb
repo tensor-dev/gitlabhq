@@ -13,6 +13,7 @@ class MoveToRolesPermissions < ActiveRecord::Migration
     UsersProject.update_all ["project_access = ?", UsersProject::DEVELOPER], ["repo_access = ?", repo_rw]
     UsersProject.update_all ["project_access = ?", UsersProject::REPORTER], ["repo_access = ?", repo_r]
     UsersProject.update_all ["project_access = ?", UsersProject::GUEST], ["repo_access = ?", repo_n]
+    UsersProject.update_all ["project_access = ?", UsersProject::COLLECTOR], ["repo_access = ?", repo_n]
 
     remove_column :users_projects, :repo_access
   end

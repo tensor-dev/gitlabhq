@@ -10,6 +10,7 @@ module Gitlab
     DEVELOPER = 30
     MASTER    = 40
     OWNER     = 50
+    COLLECTOR = 60
 
     class << self
       def values
@@ -18,25 +19,27 @@ module Gitlab
 
       def options
         {
-          "Guest"     => GUEST,
-          "Reporter"  => REPORTER,
-          "Developer" => DEVELOPER,
-          "Master"    => MASTER,
+            "Guest"     => GUEST,
+            "Reporter"  => REPORTER,
+            "Developer" => DEVELOPER,
+            "Master"    => MASTER,
+            "Collector" => COLLECTOR,
         }
       end
 
       def options_with_owner
         options.merge(
-          "Owner" => OWNER
+            "Owner" => OWNER
         )
       end
 
       def sym_options
         {
-          guest:     GUEST,
-          reporter:  REPORTER,
-          developer: DEVELOPER,
-          master:    MASTER,
+            guest:     GUEST,
+            reporter:  REPORTER,
+            developer: DEVELOPER,
+            master:    MASTER,
+            collector: COLLECTOR,
         }
       end
     end
