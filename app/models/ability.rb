@@ -32,6 +32,9 @@ class Ability
       if team.masters.include?(user)
         rules << project_master_rules
 
+      elsif team.release_engineer.include?(user)
+        rules << project_release_engineer_rules
+
       elsif team.developers.include?(user)
         rules << project_dev_rules
 
@@ -87,6 +90,12 @@ class Ability
         :write_project,
         :write_issue,
         :write_note
+      ]
+    end
+
+    def project_release_engineer_rules
+      project_guest_rules + [
+        :push_code_to_protected_branches,
       ]
     end
 

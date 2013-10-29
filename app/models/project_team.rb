@@ -80,6 +80,10 @@ class ProjectTeam
     @developers ||= fetch_members(:developers)
   end
 
+  def release_engineer
+    @release_engineer ||= fetch_members(:release_engineer)
+  end
+
   def masters
     @masters ||= fetch_members(:masters)
   end
