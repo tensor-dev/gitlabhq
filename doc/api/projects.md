@@ -199,7 +199,7 @@ The project access levels are defined in the `user_project.rb` class. Currently,
   GUEST     = 10
   REPORTER  = 20
   DEVELOPER = 30
-  RELEASE_ENGINEER = 35
+  RELEASE_ENGINEER = 25
   MASTER    = 40
 ```
 

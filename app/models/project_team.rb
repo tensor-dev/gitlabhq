@@ -81,7 +81,7 @@ class ProjectTeam
   end
 
   def release_engineer
-    @release_engineer ||= fetch_members(:release_engineer)
+    @release_engineers ||= fetch_members(:release_engineers)
   end
 
   def masters
