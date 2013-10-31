@@ -10,6 +10,7 @@ class MoveToRolesPermissions < ActiveRecord::Migration
     UsersProject.update_all({:project_access => UsersProject::MASTER, :repo_access => 99 }, ["project_access = ?", project_rwa])
 
     # Build other roles based on repo access
+    UsersProject.update_all ["project_access = ?", UsersProject::RELEASE_ENGINEER], ["repo_access = ?", repo_n]
     UsersProject.update_all ["project_access = ?", UsersProject::DEVELOPER], ["repo_access = ?", repo_rw]
     UsersProject.update_all ["project_access = ?", UsersProject::REPORTER], ["repo_access = ?", repo_r]
     UsersProject.update_all ["project_access = ?", UsersProject::GUEST], ["repo_access = ?", repo_n]
