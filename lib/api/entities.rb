@@ -12,6 +12,7 @@ module API
       expose :created_at
       expose :is_admin?, as: :is_admin
       expose :bio, :skype, :linkedin, :twitter, :website_url
+      expose :id
     end
 
     class UserFull < User
