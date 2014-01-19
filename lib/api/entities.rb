@@ -16,6 +16,7 @@ module API
 
     class UserSafe < Grape::Entity
       expose :name, :username
+      expose :id
     end
 
     class UserBasic < Grape::Entity
