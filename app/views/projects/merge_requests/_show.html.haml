@@ -50,12 +50,13 @@
       var gitlabParams = getGitlabParams();
    
       var buildServer = gitlabParams.ciserver;
-      var fullBranch = $('.label-branch').eq(0).text();
-      var targetBranch = $('.label-branch').eq(1).text();
+      var branches = $('.prepend-left-20').find('span');
+      var fullBranch = branches.eq(0).text();
+      var targetBranch = branches.eq(1).text();
       var branch = fullBranch.replace(/[^\/]+\//, '');
       var branchDst = fullBranch.split('/')[0];
       var btPostfix = branchDst == 'dev' ? 'dev' : branchDst.replace(/\./g, '');
-      var $wiki = $('.wiki'), $boxBody = $('.ui-box-body');   
+      var $wiki = $('.wiki'), $boxBody = $('.issue-box h4.title');   
       if (loc.indexOf('sbis3-genie') + 1) {
          var buildTypes = [ 'Sbis3genie_Unittest', 'Sbis3genie_Integration' ];
          var branch = fullBranch;
@@ -72,7 +73,7 @@
          return html;
       }, '<h4>Статус сборок по ветке</h4>');
       if (!$wiki.length) {
-         var $boxBottom = $('<div></div>', { 'class': 'ui-box-bottom' });
+         var $boxBottom = $('<div></div>', { 'class': 'description' });
          $boxBottom.append($wiki = $('<div></div>', { 'class': 'wiki' }));
          $boxBody.after($boxBottom);
       }
