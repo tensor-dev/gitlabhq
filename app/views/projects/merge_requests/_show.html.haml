@@ -44,142 +44,162 @@
   });
 
 :javascript   
-   var loc = window.location.pathname;
-   if (loc.match(/merge_requests\/\d+(\/diffs)?$/)) {
-      var gitlabToken = 'S61nJcy6wSpYoai6PNmd';
-      var gitlabParams = getGitlabParams();
+   // Параметры
+   var tensorCIParams = { // Параметры работы скрипта
+         gitlabKey: 'S61nJcy6wSpYoai6PNmd',
+         gitlabApiUrl: 'https://git.sbis.ru/api/v3/',
+         tcApiUrl: '/guestAuth/app/rest/',
+         tcProtocol: 'https://'
+      },
+      cachedData = {
+         currentProject: {id: -1},
+         currentMergeRequest: {id: -1}
+      };
    
-      var buildServer = gitlabParams.ciserver;
-      var branches = $('.prepend-left-20').find('span');
-      var fullBranch = branches.eq(0).text();
-      var targetBranch = branches.eq(1).text();
-      var branch = fullBranch.replace(/[^\/]+\//, '');
-      var branchDst = fullBranch.split('/')[0];
-      var btPostfix = branchDst == 'dev' ? 'dev' : branchDst.replace(/\./g, '');
-      var $wiki = $('.wiki'), $boxBody = $('.issue-box h4.title');   
-      if (loc.indexOf('sbis3-genie') + 1) {
-         var buildTypes = [ 'Sbis3genie_Unittest', 'Sbis3genie_Integration' ];
-         var branch = fullBranch;
-      } else {
-         var buildTypes = [ 'unit', 'prep', 'layout', 'integration' ].map(function(p) { return p + btPostfix; });
-      }
-      var html = buildTypes.reduce(function(html, build) {
-         html += '<p><a href="https://' + buildServer + '/viewType.html?buildTypeId=' + build + '&branch=' + encodeURIComponent(branch) + '" class="' + build + '">' +
-         '<span class="buildName"></span> (' + branch + ')</a>: ' +
-         '<img src="https://' + buildServer + '/app/rest/builds/buildType:' + build + ',branch:' + encodeURIComponent(branch) + '/statusIcon" /> &#8680 ' +
-         '<a href="https://' + buildServer + '/viewType.html?buildTypeId=' + build + '&branch=' + encodeURIComponent('<default>') + '" class="' + build + '">' +
-         '<span class="buildName"></span> (' + targetBranch + ')</a>: ' +
-         '<img src="https://' + buildServer + '/app/rest/builds/buildType:' + build + '/statusIcon" /></p>';
-         return html;
-      }, '<h4>Статус сборок по ветке</h4>');
-      if (!$wiki.length) {
-         var $boxBottom = $('<div></div>', { 'class': 'description' });
-         $boxBottom.append($wiki = $('<div></div>', { 'class': 'wiki' }));
-         $boxBody.after($boxBottom);
-      }
-      $wiki.append(html);
-      var defStat = ajaxQueries(buildTypes);
-      defStat.done(function(res) {
-         highlightBuild(res, true);
-      });
-      defStat.fail(function(res, error) {
-         switch (error) {
-            case 0:
-               console.log('Ошибка. Коммит не соответствует другим, значит сборка еще идет (или что-то пошло не так)');
-               var commitName = getCommitByRevision(res.revisions, gitlabParams.vcsroots),
-                   $commit = $('.commit:contains(\'' + commitName.substr(0, 9) + '\')');
-               if ($commit.prev().hasClass('commit')) {
-                  $wiki.append('<h4 style="color: #1200ff; margin-top: 5px;">Сборка проводится в данный момент</h4>');
-               }
-               break;
-            case 1:
-               console.log('Ошибка. Одна из сборок не прошла тесты');
-               highlightBuild(res, false);
-               break;
+   /**
+    * Проверяет что страница это MR и показывает информацию по сборкам
+    */
+   function showCIInfo() {
+      if (isPageMergeRequest()) {
+         var projectParams = getCurrentProjectInfo();
+         if (projectParams) {
+            showBuildsInfo(projectParams);
+            // TODO: Показать коммиты, по которым сборка не прошла
          }
-      });
-   }
-   function getCommitByRevision(revisions, vcsroots) {
-      var commit = '';
-      $.each(revisions.revision, function(key, revision) {
-         $.each(vcsroots, function(key, vcsroot) {
-            if ((revision['vcs-root-instance']['vcs-root-id'].indexOf(vcsroot) + 1) === 1) {
-               commit = revision.version;
-            }
-         });
-      });
-      return commit;
-   }
-   function highlightBuild(res, success) {
-      var commitName = getCommitByRevision(res.revisions, gitlabParams.vcsroots),
-          $commit = $('.commit:contains(\'' + commitName.substr(0, 9) + '\')');
-      if ($commit.prev().hasClass('commit')) {
-         $wiki.append('<h4 style="color: red; margin-top: 5px;">Данные неактуальны, сборка в очереди</h4>');
-      }
-      var $commitRowMessage = $('.commit:contains(\'' + commitName.substr(0, 9) + '\') > .commit-row-title > .commit-row-message');
-      if (success) {
-         $commit.css('background', 'rgb(202, 255, 200)');
-         $commitRowMessage.append('<span style="font-weight: normal;"> (последняя сборка, удачно) </span>');
-      } else {
-         $commit.css('background', 'rgb(255, 197, 197)');
-         $commitRowMessage.append('<span style="font-weight: normal;"> (последняя сборка, неудачно)</span>');
       }
    }
-   function ajaxQueries(buildTypes) {
-      var defer = jQuery.Deferred();
-      var counter = buildTypes.length;
-      var commitName = '';
    
-      buildTypes.forEach(function(build){ //Проверка статусов сборок по всем типам тестов
-         $.ajax({
-            url: 'https://' + buildServer + '/guestAuth/app/rest/builds/buildType:' + build + ',branch:' + encodeURIComponent(branch),
-               headers: {
-                  Accept: 'application/json'
-               }
-         }).done(function(res){
-            counter--;
-            if (commitName === '') { //Если коммит еще не определен
-               commitName = getCommitByRevision(res.revisions, gitlabParams.vcsroots);
-            } else if (commitName !== getCommitByRevision(res.revisions, gitlabParams.vcsroots)) { //Если не коммит соответствует предыдущим
-               defer.reject(res, 0); //Ошибка. Коммит не соответствует другим, значит сборка еще идет (или что-то пошло не так и можно паниковать)
-            }
-            if (res.status == 'SUCCESS') {
-               if (counter === 0) {
-                  defer.resolve(res); //Если все сборки прошли удачно и по одинаковым коммитам
-               }
-            } else {
-               defer.reject(res, 1); //Ошибка. Одна из сборок не прошла тесты
-            }
-         });
-      });
-      buildTypes.forEach(function(build){ //Загрузка названий типов тестов (??)
-         $.ajax({
-           url: 'https://' + buildServer + '/guestAuth/app/rest/buildTypes/' + build,
-           headers: {
-             Accept: 'application/json'
-           }
-         }).done(function(res){
-           $('.' + build + ' .buildName').text(res.name);
-         });
-      });
-      return defer;
+   /**
+    * Проверяет является ли страница страницей с merge request'ом.
+    * Возвращает true если является и false в ином случае.
+    */
+   function isPageMergeRequest() {
+      return /https?:\/\/git\.sbis\.ru\/.*\/merge_requests\/\d+\/?/.test(document.location.href);
    }
-   function getGitlabParams() { //Загрузить список параметров из description проекта GitLab
-      var response = JSON.parse($.ajax({
-         url: 'https://git.sbis.ru/api/v3/projects/all',
-            headers: {
-            Accept: 'application/json',
-            'PRIVATE-TOKEN': gitlabToken
-         },
-         async: false  //Необходимая мера. Сначала мы должны получить параметры и только потом сможем что-то сделать
-      }).responseText);
-      //Ищем проект по URL
-      var gitlabParams = {};
-      var currentURL = window.location.href.replace(/\/merge_requests\/.*/, '').replace('https://', 'http://');
-      $.each(response, function(key, value) {
-         if (value.web_url == currentURL) {
-            gitlabParams = JSON.parse(value.description.indexOf('{') + 1 ? value.description.substr(value.description.indexOf('{')) : '{}');
+   
+   /**
+    * Получает мета-информацию по текущему проекту, которая хранится в description.
+    * Возвращает объект-описатель проекта или null, если получить инорфмацию не удалось.
+    */
+   function getCurrentProjectInfo() {
+      var dataProjectID = $('body').attr('data-project-id'); // Здесь всегда хранится ID проекта
+      if (cachedData.currentProject.id === dataProjectID) {
+         return cachedData.currentProject;
+      }
+      var URL = tensorCIParams.gitlabApiUrl + 'projects/' + dataProjectID, // Ссылка для получения информации по проекту
+         currentProject = null;
+      if (!dataProjectID) {
+         return null;
+      }
+      jQuery.ajax(URL, {
+         'async': false,
+         'headers': {
+            'Accept': 'application/json',
+            'PRIVATE-TOKEN': tensorCIParams.gitlabKey
          }
+      }).done(function (data) {
+         currentProject = data;
       });
-      return gitlabParams;
+   
+      if (currentProject && currentProject.description) {
+         cachedData.currentProject = currentProject;
+         var metaInfo = currentProject.description.match(/\{.*\}/)[0];
+         return JSON.parse(metaInfo);
+      } else {
+         return null;
+      }
    }
+   
+   /**
+    * Показывает информацию по сборкам по переданной структуре projectParams
+    */
+   function showBuildsInfo(projectParams) {
+      var mergeRequestInfo = getMergeRequestInfo();
+      if (!mergeRequestInfo) {
+         return;
+      }
+      var branchFrom = mergeRequestInfo.source_branch,
+         branchTo = mergeRequestInfo.target_branch,
+         buildsCount = projectParams.builds.length;
+   
+      if (projectParams.buildsPostfix) { // Если нужен постфикс, то делаем его (на данный момент актуально только для sbis3-ws и sbis3-stan)
+         var postfix = branchFrom.split('/')[0].replace(/\./g, '');
+         branchFrom = branchFrom.replace(/[^\/]+\//, '');
+      }
+   
+      var $desc = $('.issue-box'),
+          $ci = $desc.find('.ci');
+      if (!$ci.length) {
+         $ci = $('<div class="ci" style="padding: 15px 25px;"></div>');
+         $desc.append($ci);
+      }
+      $ci.empty();
+      $ci.append('<h4>Статус сборок по ветке</h4>');
+   
+      for (var i = 0; i < buildsCount; i++) {
+         if (projectParams.buildsPostfix) {
+            projectParams.builds[i] += postfix;
+         }
+         $ci.append(generateBuildRow(projectParams, projectParams.builds[i], branchFrom, branchTo)); // Вывести результаты на экран
+      }
+   }
+   
+   /**
+    * Возвращает информацию по MR, соответствующему текущей странице
+    * Если получить информацию не удалось возвращает null
+    */
+   function getMergeRequestInfo() {
+      // Т. к. гитлаб не умеет возвращать мерж по id в проекте, а только по абсолютному id
+      // воспользуемся небольшим хаком
+      var mergeID = document.location.href.match(/\d+(?=$|\/$|\/diffs$)/)[0]; // ID мержа в проекте
+      if (cachedData.currentMergeRequest.id === mergeID) {
+         return cachedData.currentMergeRequest;
+      }
+      var titleText = $('.merge-request > .page-title').text(),
+         projectID = $('body').attr('data-project-id'),
+         URL = tensorCIParams.gitlabApiUrl + 'projects/' + projectID + '/merge_requests?per_page=1&page=' + mergeID,
+         mergeRequestInfo = null;
+      jQuery.ajax(URL, {
+         'async': false,
+         'headers': {
+            'Accept': 'application/json',
+            'PRIVATE-TOKEN': tensorCIParams.gitlabKey
+         }
+      }).done(function (data) {
+         mergeRequestInfo = data[0];
+      });
+      cachedData.currentMergeRequest = mergeRequestInfo;
+      return mergeRequestInfo;
+   }
+   
+   /**
+    * Генерирует и возвращает HTML верстку для очередной строки сборки
+    */
+   function generateBuildRow(projectParams, buildType, branchFrom, branchTo) {
+      // TODO: (!!!) Узнать у CI-сервера какая ветка считается <default>
+      var encodedBranchFrom = (branchFrom === 'master') ? encodeURIComponent('<default>') : encodeURIComponent(branchFrom),
+         encodedBranchTo = (branchTo === 'master') ? encodeURIComponent('<default>') : encodeURIComponent(branchTo),
+         html = '<p><a href="' + tensorCIParams.tcProtocol + projectParams.ciserver + '/viewType.html?buildTypeId=' + buildType + '&branch=' + encodedBranchFrom + '" class="' + buildType + '">' +
+            '<span class="buildName"></span> (' + branchFrom + ')</a>: ' +
+            '<img src="' + tensorCIParams.tcProtocol + projectParams.ciserver + tensorCIParams.tcApiUrl + 'builds/buildType:' + buildType + ',branch:' + encodedBranchFrom + '/statusIcon" /> &#8680 ' +
+            '<a href="' + tensorCIParams.tcProtocol + projectParams.ciserver + '/viewType.html?buildTypeId=' + buildType + '&branch=' + encodedBranchTo + '" class="' + buildType + '">' +
+            '<span class="buildName"></span> (' + branchTo + ')</a>: ';
+      if (projectParams.buildsPostfix) { // Если есть постфикс, то ветка назначения чаще всего <default>
+         html += '<img src="' + tensorCIParams.tcProtocol + projectParams.ciserver + tensorCIParams.tcApiUrl + 'builds/buildType:' + buildType + ',branch:' + encodeURIComponent('<default>') + '/statusIcon" /></p>';
+      } else {
+         html += '<img src="' + tensorCIParams.tcProtocol + projectParams.ciserver + tensorCIParams.tcApiUrl + 'builds/buildType:' + buildType + ',branch:' + encodedBranchTo + '/statusIcon" /></p>';
+      }
+   
+      $.ajax({ // Асинхронно подгрузим человекочитаемое название
+         url: tensorCIParams.tcProtocol + projectParams.ciserver + tensorCIParams.tcApiUrl + 'buildTypes/' + buildType,
+         headers: {
+            Accept: 'application/json'
+         }
+      }).done(function (res) {
+         $('.' + buildType + ' .buildName').text(res.name);
+      });
+   
+      return html;
+   }
+   
+   showCIInfo();

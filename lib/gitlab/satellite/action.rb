@@ -49,7 +49,7 @@ module Gitlab
 
       def handle_exception(exception)
         if exception.instance_of?(Grit::Git::GitTimeout)
-          Gitlab::GitLogger.error(exception.message + " " + exception.command + " " + exception.bytes_read)
+          Gitlab::GitLogger.error(exception.message.to_s() + " " + exception.command.to_s() + " " + exception.bytes_read.to_s())
         else
           Gitlab::GitLogger.error(exception.message)
         end
